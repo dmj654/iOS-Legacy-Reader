@@ -235,7 +235,7 @@ struct CleanupEngine {
             return text.components(separatedBy: .newlines)
                 .filter { line in
                     let hit = rule.isRegex
-                        ? (try? NSRegularExpression(pattern: rule.pattern))?.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil
+                        ? (try? NSRegularExpression(pattern: rule.pattern, options: []))?.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil
                         : line.contains(rule.pattern)
                     return !hit
                 }.joined(separator: "\n")
@@ -243,7 +243,7 @@ struct CleanupEngine {
             return text.components(separatedBy: .newlines)
                 .filter { line in
                     let hit = rule.isRegex
-                        ? (try? NSRegularExpression(pattern: rule.pattern))?.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil
+                        ? (try? NSRegularExpression(pattern: rule.pattern, options: []))?.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil
                         : line.contains(rule.pattern)
                     return hit
                 }.joined(separator: "\n")
