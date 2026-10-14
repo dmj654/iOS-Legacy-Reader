@@ -7,7 +7,7 @@ struct LocalImport {
     // MARK: TXT 导入：按常见章节标题正则切分
     static func `import`(txtURL: URL) -> Book? {
         guard let raw = try? String(contentsOf: txtURL, encoding: .utf8) ??
-                         String(contentsOf: txtURL, encoding: .gb18030) else { return nil }
+                         String(contentsOf: txtURL, encoding: String.Encoding(rawValue: 0x80000632)) else { return nil }
         let text = raw.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
         let name = txtURL.deletingPathExtension().lastPathComponent
         let author = extractAuthor(from: text) ?? "未知"
@@ -22,11 +22,11 @@ struct LocalImport {
             chapters.append(Chapter(title: name, url: "txt://\(name)/0", index: 0, content: text))
         } else {
             for (i, m) in matches.enumerated() {
-                let start = m.range.location
-                let end = (i + 1 < matches.count) ? matches[i + 1].range.location : ns.length
+                let start = Int(m.range.location)
+                let end = Int((i + 1 < matches.count) ? matches[i + 1].range.location : ns.length)
                 let range = NSRange(location: start, length: end - start)
                 let chunk = ns.substring(with: range)
-                let title = ns.substring(with: m.range).trimmingCharacters(in: .whitespacesAndNewlines)
+                let title = ns.substring(with: m.range).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 chapters.append(Chapter(title: title, url: "txt://\(name)/\(i)", index: i, content: chunk))
             }
         }
@@ -41,7 +41,7 @@ struct LocalImport {
     private static func extractAuthor(from text: String) -> String? {
         let patterns = [#"作者[：:]\s*([^\n]{1,20})"#, #"作\s*者[：:]\s*([^\n]{1,20})"#, #"著\s*[\/／]\s*([^\n]{1,20})"#]
         for p in patterns {
-            if let re = try? NSRegularExpression(pattern: p),
+            if let re = try? NSRegularExpression(pattern: p, options: []),
                let m = re.firstMatch(in: text, range: NSRange(location: 0, length: (text as NSString).length)),
                m.numberOfRanges > 1 {
                 let a = (text as NSString).substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -62,11 +62,11 @@ struct LocalImport {
               let opfPath = parseOPFPath(container),
               let opfData = files[opfPath] else { return nil }
 
-        let (chapters, coverPath) = parseOPF(opfData, opfPath: opfPath, files: files)
+        let (chapters, coverPath) = parseOPF(opfData, opfPath: opfPath, files: files, name: name)
         var book = Book(name: name, author: "未知", bookUrl: "epub://\(name)", source: localSource())
         book.intro = "本地导入 EPUB"
         book.chapters = chapters
-        if let coverPath = coverPath, let cover = files[coverPath] {
+        if let coverPath = coverPath, files[coverPath] != nil {
             let dir = (opfPath as NSString).deletingLastPathComponent
             let full = dir.isEmpty ? coverPath : (dir + "/" + coverPath)
             if let c = files[full] { book.coverUrl = "data:image/png;base64," + c.base64EncodedString() }
@@ -77,7 +77,7 @@ struct LocalImport {
     private static func parseOPFPath(_ container: Data) -> String? {
         guard let xml = String(data: container, encoding: .utf8) else { return nil }
         // 取第一个 full-path
-        let re = try? NSRegularExpression(pattern: #"full-path="([^"]+)""#)
+        let re = try? NSRegularExpression(pattern: #"full-path="([^"]+)""#, options: [])
         if let m = re?.firstMatch(in: xml, range: NSRange(location: 0, length: (xml as NSString).length)),
            m.numberOfRanges > 1 {
             return (xml as NSString).substring(with: m.range(at: 1))
@@ -85,11 +85,11 @@ struct LocalImport {
         return nil
     }
 
-    private static func parseOPF(_ opf: Data, opfPath: String, files: [String: Data]) -> ([Chapter], String?) {
+    private static func parseOPF(_ opf: Data, opfPath: String, files: [String: Data], name: String) -> ([Chapter], String?) {
         guard let xml = String(data: opf, encoding: .utf8) else { return ([], nil) }
         // 提取 spine 顺序的 item href
-        let itemRefRe = try? NSRegularExpression(pattern: #"<itemref[^>]*idref="([^"]+)""#)
-        let itemRe = try? NSRegularExpression(pattern: #"<item[^>]*id="([^"]+)"[^>]*href="([^"]+)"[^>]*media-type="([^"]+)""#)
+        let itemRefRe = try? NSRegularExpression(pattern: #"<itemref[^>]*idref="([^"]+)""#, options: [])
+        let itemRe = try? NSRegularExpression(pattern: #"<item[^>]*id="([^"]+)"[^>]*href="([^"]+)"[^>]*media-type="([^"]+)""#, options: [])
 
         var idToHref: [String: (href: String, type: String)] = [:]
         if let ms = itemRe?.matches(in: xml, range: NSRange(location: 0, length: (xml as NSString).length)) {
@@ -101,7 +101,8 @@ struct LocalImport {
             }
         }
         var coverId: String?
-        if let m = try? NSRegularExpression(pattern: #"name="cover"[^>]*content="([^"]+)""#)?.firstMatch(in: xml, range: NSRange(location: 0, length: (xml as NSString).length)),
+        let coverRe = try? NSRegularExpression(pattern: #"name="cover"[^>]*content="([^"]+)""#, options: [])
+        if let m = coverRe?.firstMatch(in: xml, range: NSRange(location: 0, length: (xml as NSString).length)),
            m.numberOfRanges > 1 {
             coverId = (xml as NSString).substring(with: m.range(at: 1))
         }
@@ -123,7 +124,7 @@ struct LocalImport {
     }
 
     private static func parseTitle(_ xhtml: String) -> String? {
-        if let re = try? NSRegularExpression(pattern: #"<h[1-6][^>]*>([^<]+)</h[1-6]>"#),
+        if let re = try? NSRegularExpression(pattern: #"<h[1-6][^>]*>([^<]+)</h[1-6]>"#, options: []),
            let m = re.firstMatch(in: xhtml, range: NSRange(location: 0, length: (xhtml as NSString).length)),
            m.numberOfRanges > 1 {
             return (xhtml as NSString).substring(with: m.range(at: 1)).trimmingCharacters(in: .whitespacesAndNewlines)
