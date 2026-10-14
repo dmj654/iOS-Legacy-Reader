@@ -108,14 +108,7 @@ final class AppStore: ObservableObject {
 
     // MARK: 备份 / 恢复
     func backupBundle() -> Data {
-        let bundle: [String: Any] = [
-            "version": 1,
-            "sources": (try? JSONSerialization.jsonObject(with: SourceImporter.export(sources: sources))) ?? [],
-            "books": (try? JSONEncoder().encode(books)) ?? Data(),
-            "replaceRules": (try? JSONEncoder().encode(replaceRules)) ?? Data(),
-            "settings": (try? JSONEncoder().encode(settings)) ?? Data()
-        ]
-        // 用嵌套 JSON 编码
+        // 各段编码为 JSON 字符串后整体序列化（避免顶层含非 JSON 值的限制）
         var dict: [String: Any] = ["version": 1]
         if let d = try? JSONEncoder().encode(sources) { dict["sources"] = String(data: d, encoding: .utf8) }
         if let d = try? JSONEncoder().encode(books) { dict["books"] = String(data: d, encoding: .utf8) }
