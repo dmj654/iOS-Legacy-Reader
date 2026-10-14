@@ -76,7 +76,7 @@ struct RuleSearch: Codable, Hashable {
 }
 
 struct RuleBookInfo: Codable, Hashable {
-    var init: String?
+    var `init`: String?
     var name: String?
     var author: String?
     var intro: String?
@@ -85,6 +85,10 @@ struct RuleBookInfo: Codable, Hashable {
     var coverUrl: String?
     var tocUrl: String?
     var wordCount: String?
+
+    enum CodingKeys: String, CodingKey {
+        case `init`, name, author, intro, kind, lastChapter, coverUrl, tocUrl, wordCount
+    }
 }
 
 struct RuleToc: Codable, Hashable {
