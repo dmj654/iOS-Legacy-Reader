@@ -23,10 +23,10 @@ struct SettingsView: View {
             Form {
                 Section("阅读默认配置（全局生效）") {
                     Picker("翻页方式", selection: Binding(get: { settings.pageMode }, set: { store.settings.pageMode = $0; store.save() })) {
-                        ForEach(["scroll":"滚动","cover":"覆盖","simulation":"仿真","slide":"滑动","none":"无动画"], id: \.key) { Text($0.value) }
+                        ForEach([("scroll","滚动"),("cover","覆盖"),("simulation","仿真"),("slide","滑动"),("none","无动画")], id: \.0) { Text($0.1) }
                     }
                     Picker("主题", selection: Binding(get: { settings.theme }, set: { store.settings.theme = $0; store.save() })) {
-                        ForEach(["day":"白天","night":"夜间","eye":"护眼","paper":"羊皮纸"], id: \.key) { Text($0.value) }
+                        ForEach([("day","白天"),("night","夜间"),("eye","护眼"),("paper","羊皮纸")], id: \.0) { Text($0.1) }
                     }
                     Stepper("字号 \(Int(settings.fontSize))", value: Binding(get: { settings.fontSize }, set: { store.settings.fontSize = $0; store.save() }), in: 12...30)
                     Stepper("行距 \(Int(settings.lineSpacing))", value: Binding(get: { settings.lineSpacing }, set: { store.settings.lineSpacing = $0; store.save() }), in: 0...30)
