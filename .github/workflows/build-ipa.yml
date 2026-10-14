@@ -1,0 +1,70 @@
+name: Build Unsigned IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build (no code signing, arm64 Release)
+        run: |
+          xcodebuild -project iOSLegacyReader.xcodeproj \
+            -scheme iOSLegacyReader \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/iOSLegacyReader.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            ENABLE_BITCODE=NO \
+            clean archive
+
+      - name: Package unsigned IPA (manual Payload zip)
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -r "build/iOSLegacyReader.xcarchive/Products/Applications/iOSLegacyReader.app" build/ipa/Payload/
+          cd build/ipa
+          zip -r iOS-Legacy-Reader.ipa Payload
+          cd ../..
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-Legacy-Reader-IPA
+          path: build/ipa/iOS-Legacy-Reader.ipa
+          if-no-files-found: error
+
+      - name: Create GitHub Release with IPA
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          body: |
+            自动构建的未签名 IPA（iOS 15.0+，arm64）。
+            - 侧载方式：巨魔商店(TrollStore) / 爱思助手
+            - 无需证书、无需开发者账号
+          files: build/ipa/iOS-Legacy-Reader.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
