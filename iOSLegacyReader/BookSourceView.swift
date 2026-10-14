@@ -40,7 +40,9 @@ struct BookSourceView: View {
                     }
                     .onMove { from, to in
                         // 在过滤视图下简单处理：仅在「全部」时重排
-                        if groupFilter == "全部" { store.moveSource(from: from, to: to) }
+                        if groupFilter == "全部", let first = from.first {
+                            store.moveSource(from: first, to: to)
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -121,8 +123,11 @@ struct BookSourceView: View {
     }
 
     private func saveEdit() {
-        guard let data = editJSON.data(using: .utf8),
-              let arr = SourceImporter.import(jsonData: data), let s = arr.first else {
+        guard let data = editJSON.data(using: .utf8) else {
+            pasteMsg = "JSON 解析失败"; return
+        }
+        let arr = SourceImporter.import(jsonData: data)
+        guard let s = arr.first else {
             pasteMsg = "JSON 解析失败"; return
         }
         store.upsertSource(s)
