@@ -1,0 +1,17 @@
+# Xcode / build
+build/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+*.ipa
+*.xcarchive
+
+# Swift Package Manager
+.swiftpm/
+
+# User data / local backups
+backups/
+*.json.bak
+
+# OS
+.DS_Store
