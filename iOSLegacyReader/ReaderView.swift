@@ -257,7 +257,9 @@ struct ReaderView: View {
                 Section("屏幕") {
                     Toggle("屏幕常亮", isOn: Binding(get: { settings.keepScreenOn }, set: { store.settings.keepScreenOn = $0; UIApplication.shared.isIdleTimerDisabled = $0; store.save() }))
                     Toggle("全屏沉浸", isOn: Binding(get: { settings.fullScreen }, set: { store.settings.fullScreen = $0; store.save() }))
-                    Slider("亮度 \(Int(settings.brightness*100))%", value: Binding(get: { settings.brightness }, set: { store.settings.brightness = $0; UIScreen.main.brightness = CGFloat($0); store.save() }), in: 0.1...1)
+                    Slider(value: Binding(get: { settings.brightness }, set: { store.settings.brightness = $0; UIScreen.main.brightness = CGFloat($0); store.save() }), in: 0.1...1) {
+                        Text("亮度 \(Int(settings.brightness * 100))%")
+                    }
                 }
             }
             .navigationTitle("阅读设置").toolbar {
@@ -316,7 +318,7 @@ struct ReaderView: View {
 
     private func loadChapter(_ index: Int) async {
         guard index >= 0, index < chapters.count else { return }
-        var ch = chapters[index]
+        let ch = chapters[index]
         if let c = ch.content, !c.isEmpty {
             contents[index] = c; return
         }
